@@ -11,12 +11,16 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.1",
+    "@reduxjs/toolkit": "^2.13.0",
     "@tailwindcss/vite": "^4.3.3",
+    "async-mutex": "^0.5.0",
     "lucide-react": "^1.66.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-hook-form": "^7.91.0",
+    "react-redux": "^9.3.1",
     "react-router-dom": "^7.18.5",
+    "recharts": "^3.10.1",
     "tailwindcss": "^4.3.3",
     "zod": "^4.6.7"
   },

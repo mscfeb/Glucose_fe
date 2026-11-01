@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,23 +8,22 @@ import AuthLayout from "../../components/auth/AuthLayout";
 import FormInput from "../../components/ui/FormInput";
 import Button from "../../components/ui/Button";
 
-const loginSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .email("Please enter a valid email address"),
+import { useLoginMutation, useLazyGetMeQuery } from "../../features/auth/authApi";
+import { getApiErrorMessage } from "../../utils/apiError";
 
-  password: z
-    .string()
-    .min(1, "Password is required"),
+const loginSchema = z.object({
+  email: z.string().trim().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 
-export default function Login({
-  onSubmit,
-  loading = false,
-  serverError = "",
-}) {
-  const [notice, setNotice] = useState("");
+export default function Login() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [login, { isLoading }] = useLoginMutation();
+  const [getMe] = useLazyGetMeQuery();
+
+  const [serverError, setServerError] = useState("");
 
   const {
     register,
@@ -39,16 +38,24 @@ export default function Login({
   });
 
   const submitForm = async (values) => {
-    setNotice("");
+    setServerError("");
 
-    if (onSubmit) {
-      await onSubmit(values);
-      return;
+    try {
+      const response = await login(values).unwrap();
+      const payload = response?.data ?? response;
+
+      // Fetch the current user if the login response only returns a token.
+      if (!payload?.user && payload?.accessToken) {
+        await getMe().unwrap();
+      }
+
+      const destination =
+        location.state?.from?.pathname || "/dashboard";
+
+      navigate(destination, { replace: true });
+    } catch (error) {
+      setServerError(getApiErrorMessage(error));
     }
-
-    setNotice(
-      "Form validated successfully. Authentication API integration is the next step."
-    );
   };
 
   return (
@@ -60,7 +67,7 @@ export default function Login({
           Don't have an account?{" "}
           <Link
             to="/register"
-            className="font-semibold text-blue-600 transition hover:text-blue-700"
+            className="font-semibold text-blue-600 hover:text-blue-700"
           >
             Create account
           </Link>
@@ -72,21 +79,18 @@ export default function Login({
         className="space-y-5"
         noValidate
       >
+        {location.state?.message && (
+          <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {location.state.message}
+          </div>
+        )}
+
         {serverError && (
           <div
             role="alert"
             className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
           >
             {serverError}
-          </div>
-        )}
-
-        {notice && (
-          <div
-            role="status"
-            className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700"
-          >
-            {notice}
           </div>
         )}
 
@@ -110,22 +114,7 @@ export default function Login({
           {...register("password")}
         />
 
-        <div className="flex items-center justify-between gap-3">
-          {/* <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-slate-300 accent-blue-600"
-            />
-            Remember me
-          </label> */}
-          <div></div>
-
-          <span className="text-xs text-slate-400">
-            Secure sign in
-          </span>
-        </div>
-
-        <Button type="submit" loading={loading}>
+        <Button type="submit" loading={isLoading}>
           Sign in
         </Button>
       </form>

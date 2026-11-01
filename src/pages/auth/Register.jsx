@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import AuthLayout from "../../components/auth/AuthLayout";
 import FormInput from "../../components/ui/FormInput";
 import Button from "../../components/ui/Button";
+
+import { useRegisterMutation } from "../../features/auth/authApi";
+import { getApiErrorMessage } from "../../utils/apiError";
 
 const registerSchema = z
   .object({
@@ -38,12 +41,12 @@ const registerSchema = z
     }
   );
 
-export default function Register({
-  onSubmit,
-  loading = false,
-  serverError = "",
-}) {
-  const [notice, setNotice] = useState("");
+export default function Register() {
+  const navigate = useNavigate();
+
+  const [registerUser, { isLoading }] = useRegisterMutation();
+
+  const [serverError, setServerError] = useState("");
 
   const {
     register,
@@ -60,18 +63,22 @@ export default function Register({
   });
 
   const submitForm = async (values) => {
-    setNotice("");
+    setServerError("");
 
     const { confirmPassword, ...payload } = values;
 
-    if (onSubmit) {
-      await onSubmit(payload);
-      return;
-    }
+    try {
+      await registerUser(payload).unwrap();
 
-    setNotice(
-      "Registration form validated successfully. Authentication API integration is the next step."
-    );
+      navigate("/login", {
+        replace: true,
+        state: {
+          message: "Account created successfully. Please sign in.",
+        },
+      });
+    } catch (error) {
+      setServerError(getApiErrorMessage(error));
+    }
   };
 
   return (
@@ -83,7 +90,7 @@ export default function Register({
           Already have an account?{" "}
           <Link
             to="/login"
-            className="font-semibold text-blue-600 transition hover:text-blue-700"
+            className="font-semibold text-blue-600 hover:text-blue-700"
           >
             Sign in
           </Link>
@@ -101,15 +108,6 @@ export default function Register({
             className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
           >
             {serverError}
-          </div>
-        )}
-
-        {notice && (
-          <div
-            role="status"
-            className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700"
-          >
-            {notice}
           </div>
         )}
 
@@ -154,10 +152,10 @@ export default function Register({
 
         <p className="text-xs leading-5 text-slate-500">
           By creating an account, you agree to use Sweety responsibly
-          to track and manage your glucose readings.
+          to track your glucose readings.
         </p>
 
-        <Button type="submit" loading={loading}>
+        <Button type="submit" loading={isLoading}>
           Create account
         </Button>
       </form>

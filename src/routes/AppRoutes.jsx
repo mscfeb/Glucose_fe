@@ -5,8 +5,17 @@ import {
   Routes,
 } from "react-router-dom";
 
+import {
+  GuestRoute,
+  ProtectedRoute,
+} from "../components/common/ProtectedRoute";
+
 const Login = lazy(() => import("../pages/auth/Login"));
 const Register = lazy(() => import("../pages/auth/Register"));
+
+const AppLayout = lazy(() => import("../components/layout/AppLayout"));
+const Dashboard = lazy(() => import("../pages/app/Dashboard"));
+const MonthlyReports = lazy(() => import("../pages/app/MonthlyReports"));
 
 function PageLoader() {
   return (
@@ -25,13 +34,36 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Public routes */}
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Route>
 
-        <Route path="/login" element={<Login />} />
+        {/* Protected application routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route
+              path="/dashboard"
+              element={<Dashboard />}
+            />
 
-        <Route path="/register" element={<Register />} />
+            <Route
+              path="/reports"
+              element={<MonthlyReports />}
+            />
+          </Route>
+        </Route>
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route
+          path="/"
+          element={<Navigate to="/dashboard" replace />}
+        />
+
+        <Route
+          path="*"
+          element={<Navigate to="/dashboard" replace />}
+        />
       </Routes>
     </Suspense>
   );
